@@ -14,12 +14,22 @@ fn main() -> std::io::Result<()> {
         let orbitors = masses.entry(major).or_insert(Vec::new());
         (*orbitors).push(minor);
     }
-    for (k,v) in masses {
-        println!("{} {}", k, v.len());
-    }
+    println!("{}", count_orbits(masses));
     Ok(())
 }
 
 fn count_orbits(masses : HashMap<String, Vec<String>>) -> i32 {
-    return 0;
+    return count_orbits_recursive("COM", &masses, 0);
+}
+
+fn count_orbits_recursive(mass : &str, masses : &HashMap<String, Vec<String>>, level : i32) -> i32{ 
+    let children = match masses.get(mass) {
+        Some(x) => x,
+        None => {
+            println!("leaf {}, level {}", mass, level);
+            return level;
+        },
+    };
+    let child_orbits : i32 = children.iter().map(|x| count_orbits_recursive(x, masses, level+1)).sum();
+    level + child_orbits
 }
