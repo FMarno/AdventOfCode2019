@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use permutohedron::heap_recursive;
 
 fn main() {
-    let mut inputs : Vec<_> = (0..5).collect();
+    let mut inputs : Vec<_> = (5..10).collect();
     let mut permutations = Vec::new();
     heap_recursive(&mut inputs,|x| permutations.push(x.to_owned()));
     let input = fs::read_to_string("seven/input").expect("can't open file");
@@ -14,18 +14,25 @@ fn main() {
         )
         .max();
     println!("{:?}",m.expect("fuck"));
+    //println!("{}", thruster_signal(vec!(9,8,7,6,5), codes));
 }
 
 fn thruster_signal(input : Vec<i32>, codes : Vec<i32>) -> i32 {
-    let amps = input.iter().map(|x|{
+    let mut amps : Vec<_> = input.iter().map(|x|{
         let mut inputs : VecDeque<i32> = VecDeque::new();
         inputs.push_back(*x);
         Amp{codes:codes.to_vec(), pointer: 0, input:inputs}
-    });
-    amps.fold(0, |output, mut amp| {
-        amp.input.push_back(output);
-        amp.run_codes().expect("NO OUTPUT")
     })
+    .collect();
+    let mut output = 0;
+    for i in (0..amps.len()).cycle() {
+        amps[i].input.push_back(output);
+        match amps[i].run_codes(){
+            Some(x) => output = x,
+            None => break,
+        }
+    }
+    output
 }
 
 struct Amp {
@@ -53,112 +60,111 @@ impl Amp {
         use OpCode::*;
         let codes = &mut self.codes;
         let input = &mut self.input;
-        let pointer = &mut self.pointer;
 
         loop{
-            //println!("{} {:?}",pointer, codes);
-            let code = codes[*pointer];
+            //println!("{} {:?}",self.pointer, codes);
+            let code = codes[self.pointer];
             let (_mode3, mode2, mode1, instruction) = decode_op(code);
             //println!("{} {} {} {:?}", _mode3, mode2, mode1, instruction);
             match instruction {
                 Add => {
                     // sum ptr+1 and ptr+2 and save to ptr+3
-                    let mut l = codes[*pointer+1];
+                    let mut l = codes[self.pointer+1];
                     if !mode1 {
                         l = codes[l as usize];
                     }
-                    let mut r = codes[*pointer+2];
+                    let mut r = codes[self.pointer+2];
                     if !mode2 {
                         r = codes[r as usize];
                     }
-                    let o = codes[*pointer+3];
+                    let o = codes[self.pointer+3];
                     codes[o as usize] = l + r;
-                    *pointer += 4;
+                    self.pointer += 4;
                 },
                 Mult => {
                     // multiply ptr+1 and ptr+2 and save to ptr+3
-                    let mut l = codes[*pointer+1];
+                    let mut l = codes[self.pointer+1];
                     if !mode1 {
                         l = codes[l as usize];
                     }
-                    let mut r = codes[*pointer+2];
+                    let mut r = codes[self.pointer+2];
                     if !mode2 {
                         r = codes[r as usize];
                     }
-                    let o = codes[*pointer+3];
+                    let o = codes[self.pointer+3];
                     codes[o as usize] = l*r;
-                    *pointer += 4;
+                    self.pointer += 4;
                 },
                 Load => {
-                    // save input to *pointer+1
-                    let location = codes[*pointer+1];
+                    // save input to self.pointer+1
+                    let location = codes[self.pointer+1];
                     codes[location as usize] = input.pop_front().unwrap();
-                    *pointer += 2;
+                    self.pointer += 2;
                 },
                 Save => {
-                    // save *pointer+1 to output
-                    let mut location = codes[*pointer+1];
+                    // save self.pointer+1 to output
+                    let mut location = codes[self.pointer+1];
                     if !mode1 {
                         location = codes[location as usize];
                     }
-                    *pointer += 2;
+                    self.pointer += 2;
                     return Some(location);
                 },
                 JumpTrue => {
-                    let mut test = codes[*pointer+1];
+                    let mut test = codes[self.pointer+1];
                     if !mode1 {
                         test = codes[test as usize];
                     }
                     if test != 0 {
-                        let mut location = codes[*pointer+2];
+                        let mut location = codes[self.pointer+2];
                         if !mode2 {
                             location = codes[location as usize];
                         }
-                        *pointer = location as usize;
+                        self.pointer = location as usize;
                     } else {
-                        *pointer += 3;
+                        self.pointer += 3;
                     }
                 },
                 JumpFalse => {
-                    let mut test = codes[*pointer+1];
+                    let mut test = codes[self.pointer+1];
                     if !mode1 {
                         test = codes[test as usize];
                     }
                     if test == 0 {
-                        let mut location = codes[*pointer+2];
+                        let mut location = codes[self.pointer+2];
                         if !mode2 {
                             location = codes[location as usize];
                         }
-                        *pointer = location as usize;
+                        self.pointer = location as usize;
                     } else {
-                        *pointer += 3;
+                        self.pointer += 3;
                     }
                 },
                 LessThan => {
-                    let mut l = codes[*pointer+1];
+                    let mut l = codes[self.pointer+1];
                     if !mode1 {
                         l = codes[l as usize];
                     }
-                    let mut r = codes[*pointer+2];
+                    let mut r = codes[self.pointer+2];
                     if !mode2 {
                         r = codes[r as usize];
                     }
-                    let o = codes[*pointer+3];
+                    let o = codes[self.pointer+3];
                     codes[o as usize] = if l < r { 1} else {0};
-                    *pointer += 4;
+                    self.pointer += 4;
                 },
                 Equals => {
-                    let mut l = codes[*pointer+1];
+                    let mut l = codes[self.pointer+1];
                     if !mode1 {
                         l = codes[l as usize];
                     }
-                    let mut r = codes[*pointer+2];
+                    let mut r = codes[self.pointer+2];
                     if !mode2 {
                         r = codes[r as usize];
                     }
-                    let o = codes[*pointer+3];
+                    let o = codes[self.pointer+3];
                     codes[o as usize] = if l == r { 1} else {0};
-                    *pointer += 4;
+                    self.pointer += 4;
                 },
                 Halt => return None,
                 Error(e) => {
