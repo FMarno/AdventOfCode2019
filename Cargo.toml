@@ -1,11 +1,13 @@
 [workspace]
 
 members = [
-	"one",
-	"two",
+    "one",
+    "two",
     "three",
-	"four",
-	"five",
-	"six",
+    "four",
+    "five",
+    "six",
     "seven",
+    "eight",
+    "nine",
 ]
