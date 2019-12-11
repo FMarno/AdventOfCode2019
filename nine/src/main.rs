@@ -1,45 +1,26 @@
 use std::fs;
-use std::collections::VecDeque;
-use permutohedron::heap_recursive;
+use std::collections::{HashMap, VecDeque};
 
 fn main() {
-    let mut inputs : Vec<_> = (5..10).collect();
-    let mut permutations = Vec::new();
-    heap_recursive(&mut inputs,|x| permutations.push(x.to_owned()));
-    let input = fs::read_to_string("seven/input").expect("can't open file");
+    let input = fs::read_to_string("nine/input").expect("can't open file");
     let codes : Vec<i64> = input.trim().split(",").map(|x| x.parse::<i64>().unwrap()).collect();
-    /*let m = permutations.iter()
-        .map(
-            |x| thruster_signal(x.to_vec(), codes.to_vec())
-        )
-        .max();
-    println!("{:?}",m.expect("fuck"));*/
-    println!("{}", thruster_signal(vec!(9,8,7,6,5), codes));
-}
-
-fn thruster_signal(input : Vec<i64>, codes : Vec<i64>) -> i64 {
-    let mut amps : Vec<_> = input.iter().map(|x|{
-        let mut inputs : VecDeque<i64> = VecDeque::new();
-        inputs.push_back(*x);
-        Amp::new(codes.to_vec(), inputs)
-    })
-    .collect();
-    let mut output = 0;
-    for i in (0..amps.len()).cycle() {
-        amps[i].input.push_back(output);
-        match amps[i].run_codes(){
-            Some(x) => output = x,
+    let mut input = VecDeque::new();
+    input.push_back(1);
+    let mut amp = Amp::new(codes, input);
+    loop {
+        match amp.run_codes() {
+            Some(x) => print!("{} ", x),
             None => break,
         }
     }
-    output
 }
 
 struct Amp {
     codes : Vec<i64>,
     pointer : usize,
     input : VecDeque<i64>,
-    relative_base : usize,
+    relative_base : i64,
+    disk : HashMap<usize, i64>,
 }
 
 #[derive(Debug)]
@@ -48,11 +29,12 @@ enum OpCode {
     Mult,
     Load,
     Save,
-    Halt,
     JumpTrue,
     JumpFalse,
     LessThan,
     Equals,
+    AdjustBase,
+    Halt,
     Error(i64),
 }
 
@@ -65,37 +47,37 @@ enum Mode {
 
 impl Amp {
     fn new(codes: Vec<i64>, input :VecDeque<i64>) -> Amp {
-        Amp{codes, pointer : 0, input, relative_base: 0}
+        Amp{codes, pointer : 0, input, relative_base: 0, disk: HashMap::new()}
     }
 
     fn run_codes(&mut self) -> Option<i64> {
         use OpCode::*;
 
         loop{
-            //thread::sleep(time::Duration::from_millis(100));
-            println!("{} {:?}",self.pointer, self.codes);
+            //println!("{} {} {:?}",self.pointer,self.relative_base, self.codes);
             let code = self.get_argument(Mode::Immediate);
-            let (mode3, mode2, mode1, instruction) = decode_op(code);
-            println!("{:?} {:?} {:?} {:?}", mode3, mode2, mode1, instruction);
+            let (_mode3, mode2, mode1, instruction) = decode_op(code);
+            //println!("{:?} {:?} {:?} {:?}", _mode3, mode2, mode1, instruction);
             match instruction {
                 Add => {
                     // sum ptr+1 and ptr+2 and save to ptr+3
                     let l = self.get_argument(mode1);
                     let r = self.get_argument(mode2);
                     let o = self.get_argument(Mode::Immediate);
-                    self.codes[o as usize] = l + r;
+                    self.set_memory(o as usize, l+r);
                 },
                 Mult => {
                     // multiply ptr+1 and ptr+2 and save to ptr+3
                     let l = self.get_argument(mode1);
                     let r = self.get_argument(mode2);
                     let o = self.get_argument(Mode::Immediate);
-                    self.codes[o as usize] = l*r;
+                    self.set_memory(o as usize, l*r);
                 },
                 Load => {
                     // save input to self.pointer+1
                     let location = self.get_argument(Mode::Immediate);
-                    self.codes[location as usize] = self.input.pop_front().unwrap();
+                    let input = self.input.pop_front().unwrap();
+                    self.set_memory(location as usize, input);
                 },
                 Save => {
                     // save self.pointer+1 to output
@@ -120,13 +102,17 @@ impl Amp {
                     let l = self.get_argument(mode1);
                     let r = self.get_argument(mode2);
                     let o = self.get_argument(Mode::Immediate);
-                    self.codes[o as usize] = if l < r { 1} else {0};
+                    self.set_memory(o as usize,if l < r {1} else {0});
                 },
                 Equals => {
                     let l = self.get_argument(mode1);
                     let r = self.get_argument(mode2);
                     let o = self.get_argument(Mode::Immediate);
-                    self.codes[o as usize] = if l == r { 1} else {0};
+                    self.set_memory(o as usize,if l == r { 1} else {0});
+                },
+                AdjustBase => {
+                    let v = self.get_argument(mode1);
+                    self.relative_base += v;
                 },
                 Halt => return None,
                 Error(e) => {
@@ -137,12 +123,31 @@ impl Amp {
         }
     }        
 
+    fn set_memory(&mut self, ptr : usize, v : i64){
+        if ptr < self.codes.len() {
+            self.codes[ptr] = v;
+        } else {
+            self.disk.insert(ptr, v);
+        }
+    }
+
+    fn get_memory(&self, ptr : usize) -> i64 {
+        if ptr < self.codes.len(){
+            self.codes[ptr]
+        } else {
+            match self.disk.get(&ptr) {
+                Some(x) => *x,
+                None => 0,
+            }
+        }
+    }
+
     fn get_argument(&mut self, mode : Mode) -> i64 {
         use Mode::*;
         let out = match mode {
-            Position =>self.codes[self.codes[self.pointer] as usize],
-            Immediate => self.codes[self.pointer],
-            Relative =>self.codes[self.relative_base+(self.codes[self.pointer] as usize)],
+            Position =>self.get_memory(self.get_memory(self.pointer) as usize),
+            Immediate => self.get_memory(self.pointer),
+            Relative =>self.get_memory((self.relative_base+self.get_memory(self.pointer)) as usize),
         };
         self.pointer+=1;
         out
@@ -167,6 +172,7 @@ fn decode_op(op : i64) -> (Mode,Mode,Mode,OpCode) {
         6 => JumpFalse,
         7 => LessThan,
         8 => Equals,
+        9 => AdjustBase,
         99 => Halt,
         x => Error(x),
     };
