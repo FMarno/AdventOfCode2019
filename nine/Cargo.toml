@@ -5,4 +5,4 @@ authors = ["FMarno <finlay.marno@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-permutohedron = "0.2.4"
+colored = "1.9.0"

@@ -1,5 +1,6 @@
 use std::fs;
 use std::collections::{HashMap, VecDeque};
+use colored::*;
 
 fn main() {
     let input = fs::read_to_string("nine/input").expect("can't open file");
@@ -9,9 +10,12 @@ fn main() {
     let mut amp = Amp::new(codes, input);
     loop {
         match amp.run_codes() {
-            Some(x) => print!("{} ", x),
+            Some(()) => (),
             None => break,
         }
+    }
+    for x in amp.output {
+        print!("{} ", x);
     }
 }
 
@@ -19,6 +23,7 @@ struct Amp {
     codes : Vec<i64>,
     pointer : usize,
     input : VecDeque<i64>,
+    output : VecDeque<i64>,
     relative_base : i64,
     disk : HashMap<usize, i64>,
 }
@@ -47,75 +52,83 @@ enum Mode {
 
 impl Amp {
     fn new(codes: Vec<i64>, input :VecDeque<i64>) -> Amp {
-        Amp{codes, pointer : 0, input, relative_base: 0, disk: HashMap::new()}
+        Amp{codes, pointer : 0, input,output:VecDeque::new(), relative_base: 0, disk: HashMap::new()}
     }
 
-    fn run_codes(&mut self) -> Option<i64> {
-        use OpCode::*;
-
+    fn run_codes(&mut self) -> Option<()> {
         loop{
-            //println!("{} {} {:?}",self.pointer,self.relative_base, self.codes);
+            println!("ptr:{} r-ptr:{}",self.pointer,self.relative_base);
+            print_codes(&self.codes, self.pointer, self.relative_base);
             let code = self.get_argument(Mode::Immediate);
             let (_mode3, mode2, mode1, instruction) = decode_op(code);
-            //println!("{:?} {:?} {:?} {:?}", _mode3, mode2, mode1, instruction);
+            println!("{:?} {:?} {:?} {:?}", instruction, mode1,mode2,_mode3);
             match instruction {
-                Add => {
+                OpCode::Add => {
                     // sum ptr+1 and ptr+2 and save to ptr+3
                     let l = self.get_argument(mode1);
                     let r = self.get_argument(mode2);
                     let o = self.get_argument(Mode::Immediate);
+                    println!("{} {} {}",l,r,o);
                     self.set_memory(o as usize, l+r);
                 },
-                Mult => {
+                OpCode::Mult => {
                     // multiply ptr+1 and ptr+2 and save to ptr+3
                     let l = self.get_argument(mode1);
                     let r = self.get_argument(mode2);
                     let o = self.get_argument(Mode::Immediate);
+                    println!("{} {} {}",l,r,o);
                     self.set_memory(o as usize, l*r);
                 },
-                Load => {
+                OpCode::Load => {
                     // save input to self.pointer+1
                     let location = self.get_argument(Mode::Immediate);
                     let input = self.input.pop_front().unwrap();
+                    println!("{} {}",location, input);
                     self.set_memory(location as usize, input);
                 },
-                Save => {
+                OpCode::Save => {
                     // save self.pointer+1 to output
-                    let location = self.get_argument(mode1);
-                    return Some(location);
+                    let value = self.get_argument(mode1);
+                    println!("{}",value);
+                    self.output.push_back(value);
                 },
-                JumpTrue => {
+                OpCode::JumpTrue => {
                     let test = self.get_argument(mode1);
                     let location = self.get_argument(mode2);
+                    println!("{} {}",test, location);
                     if test != 0 {
                         self.pointer = location as usize;
                     }
                 },
-                JumpFalse => {
+                OpCode::JumpFalse => {
                     let test = self.get_argument(mode1);
                     let location = self.get_argument(mode2);
+                    println!("{} {}",test, location);
                     if test == 0 {
                         self.pointer = location as usize;
                     }
                 },
-                LessThan => {
+                OpCode::LessThan => {
                     let l = self.get_argument(mode1);
                     let r = self.get_argument(mode2);
                     let o = self.get_argument(Mode::Immediate);
+                    println!("{} {} {}",l,r,o);
                     self.set_memory(o as usize,if l < r {1} else {0});
                 },
-                Equals => {
+                OpCode::Equals => {
                     let l = self.get_argument(mode1);
                     let r = self.get_argument(mode2);
                     let o = self.get_argument(Mode::Immediate);
+                    println!("{} {} {}",l,r,o);
                     self.set_memory(o as usize,if l == r { 1} else {0});
                 },
-                AdjustBase => {
+                OpCode::AdjustBase => {
                     let v = self.get_argument(mode1);
+                    println!("{}",v);
                     self.relative_base += v;
                 },
-                Halt => return None,
-                Error(e) => {
+                OpCode::Halt => return None,
+                OpCode::Error(e) => {
                     println!("Unexpected code! {}" ,e);
                     return None;
                 }
@@ -147,7 +160,7 @@ impl Amp {
         let out = match mode {
             Position =>self.get_memory(self.get_memory(self.pointer) as usize),
             Immediate => self.get_memory(self.pointer),
-            Relative =>self.get_memory((self.relative_base+self.get_memory(self.pointer)) as usize),
+            Relative =>self.get_memory((self.get_memory((self.relative_base as usize +self.pointer) as usize)) as usize),
         };
         self.pointer+=1;
         out
@@ -186,4 +199,17 @@ fn to_mode(value : i64) -> Mode {
         2 => Mode::Relative,
         _ => panic!("unexpected mode value"),
     }
+}
+
+fn print_codes(codes : &Vec<i64>, pointer : usize, relative_base : i64){
+    for c in 0..codes.len() {
+        if c == pointer {
+            print!("{} ", (codes[c].to_string()).red());
+        } else if c == relative_base as usize {
+            print!("{} ",  (codes[c].to_string()).green());
+        } else {
+            print!("{} ", codes[c]);
+        }
+    }
+    println!();
 }
