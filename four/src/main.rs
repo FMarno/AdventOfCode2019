@@ -11,7 +11,10 @@ fn main() {
     println!("{}", possible);
 }
 
-fn contains_double<T>(number : &[T]) -> bool  where T : Eq + Copy {
+fn contains_double<T>(number: &[T]) -> bool
+where
+    T: Eq + Copy,
+{
     let mut i = 0;
     while i < number.len() {
         let val = number[i];
@@ -27,9 +30,9 @@ fn contains_double<T>(number : &[T]) -> bool  where T : Eq + Copy {
     return false;
 }
 
-fn accending(number : &[u8]) -> bool {
+fn accending(number: &[u8]) -> bool {
     for i in 1..number.len() {
-        if number[i-1] > number [i] {
+        if number[i - 1] > number[i] {
             return false;
         }
     }
