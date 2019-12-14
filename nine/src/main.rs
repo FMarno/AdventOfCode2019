@@ -13,7 +13,7 @@ fn main() {
         .map(|x| x.parse::<i64>().unwrap())
         .collect();
     let mut input = VecDeque::new();
-    input.push_back(1);
+    input.push_back(2);
     let mut amp = Amp::new(codes, input);
     loop {
         match amp.run_codes() {
@@ -71,75 +71,89 @@ impl Amp {
 
     fn run_codes(&mut self) -> Option<()> {
         loop {
-            println!("ptr:{} r-ptr:{}", self.pointer, self.relative_base);
-            print_codes(&self.codes, self.pointer, self.relative_base);
-            let code = self.get_argument(Mode::Immediate);
-            let (_mode3, mode2, mode1, instruction) = decode_op(code);
-            println!("{:?} {:?} {:?} {:?}", instruction, mode1, mode2, _mode3);
+            // println!("\nptr:{} r-ptr:{}", self.pointer, self.relative_base);
+            //  print_codes(&self.codes, self.pointer, self.relative_base);
+            // println!("{:?}", self.disk);
+            let code = self.get_memory(self.pointer);
+            let (mode3, mode2, mode1, instruction) = decode_op(code);
+            //println!("{:?} {:?} {:?}", mode1, mode2, mode3);
             match instruction {
                 OpCode::Add => {
                     // sum ptr+1 and ptr+2 and save to ptr+3
-                    let l = self.get_argument(mode1);
-                    let r = self.get_argument(mode2);
-                    let o = self.get_argument(Mode::Immediate);
-                    println!("{} {} {}", l, r, o);
+                    let l = self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
+                    let r = self.get_memory(self.get_argument_location(self.pointer + 2, mode2));
+                    let o = self.get_argument_location(self.pointer + 3, mode3);
+                    //println!("Add {} {} {}", l, r, o);
                     self.set_memory(o as usize, l + r);
+                    self.pointer += 4;
                 }
                 OpCode::Mult => {
                     // multiply ptr+1 and ptr+2 and save to ptr+3
-                    let l = self.get_argument(mode1);
-                    let r = self.get_argument(mode2);
-                    let o = self.get_argument(Mode::Immediate);
-                    println!("{} {} {}", l, r, o);
+                    let l = self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
+                    let r = self.get_memory(self.get_argument_location(self.pointer + 2, mode2));
+                    let o = self.get_argument_location(self.pointer + 3, mode3);
+                    //println!("Mult {} {} {}", l, r, o);
                     self.set_memory(o as usize, l * r);
+                    self.pointer += 4;
                 }
                 OpCode::Load => {
-                    // save input to self.pointer+1
-                    let location = self.get_argument(Mode::Immediate);
+                    let location = self.get_argument_location(self.pointer + 1, mode1);
                     let input = self.input.pop_front().unwrap();
-                    println!("{} {}", location, input);
+                    //println!("Load {} {}", location, input);
                     self.set_memory(location as usize, input);
+                    self.pointer += 2;
                 }
                 OpCode::Save => {
                     // save self.pointer+1 to output
-                    let value = self.get_argument(mode1);
-                    println!("{}", value);
+                    let value =
+                        self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
+                    //println!("Save {}", value);
                     self.output.push_back(value);
+                    self.pointer += 2;
                 }
                 OpCode::JumpTrue => {
-                    let test = self.get_argument(mode1);
-                    let location = self.get_argument(mode2);
-                    println!("{} {}", test, location);
+                    let test = self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
+                    let location =
+                        self.get_memory(self.get_argument_location(self.pointer + 2, mode2));
+                    //println!("JumpIfTrue {} {}", test, location);
                     if test != 0 {
                         self.pointer = location as usize;
+                    } else {
+                        self.pointer += 3;
                     }
                 }
                 OpCode::JumpFalse => {
-                    let test = self.get_argument(mode1);
-                    let location = self.get_argument(mode2);
-                    println!("{} {}", test, location);
+                    let test = self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
+                    let location =
+                        self.get_memory(self.get_argument_location(self.pointer + 2, mode2));
+                    //println!("JumpIfFalse {} {}", test, location);
                     if test == 0 {
                         self.pointer = location as usize;
+                    } else {
+                        self.pointer += 3;
                     }
                 }
                 OpCode::LessThan => {
-                    let l = self.get_argument(mode1);
-                    let r = self.get_argument(mode2);
-                    let o = self.get_argument(Mode::Immediate);
-                    println!("{} {} {}", l, r, o);
+                    let l = self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
+                    let r = self.get_memory(self.get_argument_location(self.pointer + 2, mode2));
+                    let o = self.get_argument_location(self.pointer + 3, mode3);
+                    //println!("LessThan {} {} {}", l, r, o);
                     self.set_memory(o as usize, if l < r { 1 } else { 0 });
+                    self.pointer += 4;
                 }
                 OpCode::Equals => {
-                    let l = self.get_argument(mode1);
-                    let r = self.get_argument(mode2);
-                    let o = self.get_argument(Mode::Immediate);
-                    println!("{} {} {}", l, r, o);
+                    let l = self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
+                    let r = self.get_memory(self.get_argument_location(self.pointer + 2, mode2));
+                    let o = self.get_argument_location(self.pointer + 3, mode3);
+                    //println!("Equals {} {} {}", l, r, o);
                     self.set_memory(o as usize, if l == r { 1 } else { 0 });
+                    self.pointer += 4;
                 }
                 OpCode::AdjustBase => {
-                    let v = self.get_argument(mode1);
-                    println!("{}", v);
+                    let v = self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
+                    //println!("AdjustBase {}", v);
                     self.relative_base += v;
+                    self.pointer += 2;
                 }
                 OpCode::Halt => return None,
                 OpCode::Error(e) => {
@@ -169,17 +183,13 @@ impl Amp {
         }
     }
 
-    fn get_argument(&mut self, mode: Mode) -> i64 {
+    fn get_argument_location(&self, ptr: usize, mode: Mode) -> usize {
         use Mode::*;
-        let out = match mode {
-            Position => self.get_memory(self.get_memory(self.pointer) as usize),
-            Immediate => self.get_memory(self.pointer),
-            Relative => {
-                self.get_memory((self.get_memory(self.pointer) + self.relative_base) as usize)
-            }
-        };
-        self.pointer += 1;
-        out
+        match mode {
+            Position => self.get_memory(ptr) as usize,
+            Immediate => ptr,
+            Relative => (self.get_memory(ptr) + self.relative_base) as usize,
+        }
     }
 }
 
