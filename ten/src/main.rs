@@ -94,7 +94,11 @@ fn angle(origin: &Point, other: &Point) -> f32 {
     let x_delta = other.x - origin.x;
     let y_delta = other.y - origin.y;
     let a = y_delta.atan2(x_delta);
-    if a < -std::f32::consts::FRAC_PI_2 {a+(2_f32*std::f32::consts::PI)} else {a}
+    if a < -std::f32::consts::FRAC_PI_2 {
+        a + (2_f32 * std::f32::consts::PI)
+    } else {
+        a
+    }
 }
 
 fn distance(origin: &Point, other: &Point) -> f32 {
