@@ -1,36 +1,30 @@
 use colored::*;
 use std::collections::{HashMap, VecDeque};
-use std::env;
 use std::fs;
 
 fn main() {
-    let args: Vec<_> = env::args().collect();
-    let filename = &args[1];
+    //let args: Vec<_> = env::args().collect();
+    let filename = "eleven/input";
     let input = fs::read_to_string(filename).expect("can't open file");
     let codes: Vec<i64> = input
         .trim()
         .split(",")
         .map(|x| x.parse::<i64>().unwrap())
         .collect();
-    let mut input = VecDeque::new();
-    input.push_back(2);
-    let mut amp = Amp::new(codes, input);
-    loop {
-        match amp.run_codes() {
-            Some(()) => (),
-            None => break,
-        }
-    }
-    for x in amp.output {
-        print!("{} ", x);
-    }
+
 }
 
-struct Amp {
+
+#[derive(PartialEq, Eq, Hash, Clone)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+struct IntComputer {
     codes: Vec<i64>,
     pointer: usize,
     input: VecDeque<i64>,
-    output: VecDeque<i64>,
     relative_base: i64,
     disk: HashMap<usize, i64>,
 }
@@ -57,19 +51,18 @@ enum Mode {
     Relative,
 }
 
-impl Amp {
-    fn new(codes: Vec<i64>, input: VecDeque<i64>) -> Amp {
-        Amp {
+impl IntComputer {
+    fn new(codes: Vec<i64>, input: VecDeque<i64>) -> IntComputer {
+        IntComputer {
             codes,
             pointer: 0,
             input,
-            output: VecDeque::new(),
             relative_base: 0,
             disk: HashMap::new(),
         }
     }
 
-    fn run_codes(&mut self) -> Option<()> {
+    fn run_codes(&mut self) -> Option<i64> {
         loop {
             // println!("\nptr:{} r-ptr:{}", self.pointer, self.relative_base);
             //  print_codes(&self.codes, self.pointer, self.relative_base);
@@ -108,8 +101,8 @@ impl Amp {
                     let value =
                         self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
                     //println!("Save {}", value);
-                    self.output.push_back(value);
                     self.pointer += 2;
+                    return Some(value);
                 }
                 OpCode::JumpTrue => {
                     let test = self.get_memory(self.get_argument_location(self.pointer + 1, mode1));
