@@ -1,7 +1,7 @@
 use colored::*;
+use image;
 use std::collections::{HashMap, VecDeque};
 use std::fs;
-use image;
 
 fn main() {
     //let args: Vec<_> = env::args().collect();
@@ -28,8 +28,8 @@ fn main() {
             y: pos.y - min_y,
         })
         .collect();
-    let width = max_x - min_x +1;
-    let height = max_y - min_y +1;
+    let width = max_x - min_x + 1;
+    let height = max_y - min_y + 1;
 
     let mut imgbuf = image::ImageBuffer::new(width as u32, height as u32);
 
