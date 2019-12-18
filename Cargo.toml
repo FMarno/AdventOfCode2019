@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "intcomputer",
     "one",
     "two",
     "three",
