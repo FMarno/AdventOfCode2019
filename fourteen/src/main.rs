@@ -13,9 +13,9 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn possible_fuel(ore :i64, recipes : &HashMap<String, Recipe>) -> i64 {
+fn possible_fuel(ore: i64, recipes: &HashMap<String, Recipe>) -> i64 {
     let mut min: i64 = 1;
-    let mut max :i64= ore;
+    let mut max: i64 = ore;
     loop {
         let mid = (max + min) / 2;
         println!("{} {} {}", min, mid, max);
@@ -25,7 +25,7 @@ fn possible_fuel(ore :i64, recipes : &HashMap<String, Recipe>) -> i64 {
         } else {
             max = mid;
         }
-        if max == min || min +1 == max{
+        if max == min || min + 1 == max {
             break;
         }
     }
