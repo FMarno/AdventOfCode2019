@@ -644,6 +644,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "seventeen"
+version = "0.1.0"
+dependencies = [
+ "image 0.22.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "intcomputer 0.1.0",
+]
+
+[[package]]
 name = "signal-hook"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -668,6 +676,9 @@ version = "0.1.0"
 [[package]]
 name = "sixteen"
 version = "0.1.0"
+dependencies = [
+ "rayon 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "stable_deref_trait"
