@@ -43,6 +43,7 @@ fn path(space: Vec<(Point, Status)>) -> Vec<char> {
             }
             None => return directions,
         }
+        directions.push(',');
         let steps = line_from(&space, &bot, bot_dir);
         bot = steps[steps.len() -1].to_owned();
         directions.extend(steps.len().to_string().chars());
