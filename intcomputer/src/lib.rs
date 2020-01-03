@@ -2,7 +2,7 @@ use colored::*;
 use std::collections::{HashMap, VecDeque};
 
 pub struct IntComputer {
-    codes: Vec<i64>,
+    pub codes: Vec<i64>,
     pointer: usize,
     pub input: VecDeque<i64>,
     relative_base: i64,
@@ -72,7 +72,10 @@ impl IntComputer {
                 OpCode::Load => {
                     let location = self.get_argument_location(self.pointer + 1, mode1);
                     let input = match self.input.pop_front() {
-                        Some(i) => i,
+                        Some(i) => {
+                            println!("loading {}", i);
+                            i
+                        }
                         None => {
                             println!("expected input code!");
                             return None;

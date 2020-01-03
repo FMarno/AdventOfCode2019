@@ -1,5 +1,6 @@
-use image;
 use intcomputer::*;
+use std::char;
+use std::collections::HashMap;
 use std::fs;
 
 fn main() {
@@ -10,9 +11,124 @@ fn main() {
         .split(",")
         .map(|x| x.parse::<i64>().unwrap())
         .collect();
-    let scaffolding = view_space(codes);
-    let p : String= path(scaffolding).into_iter().collect();
-    println!("{:?}", p);
+    let mut bot = IntComputer::new(codes.to_owned());
+    let scaffolding = view_space(&mut bot);
+    ascii_maze(&scaffolding);
+    let p: String = path(scaffolding).into_iter().collect();
+    // let p = "R,8,R,8,R,4,R,4,R,8,L,6,L,2,R,4,R,4,R,8,R,8,R,8,L,6,L,2,".to_string();
+    println!("{}", p);
+    let mut subcommands = find_subcommands(p.to_owned()).unwrap();
+    let main: Vec<_> = subcommands.iter().map(|(_, v)| v.to_owned()).collect();
+    subcommands.sort_by(|l, r| l.1.cmp(&r.1));
+    let mut routines: Vec<_> = subcommands.into_iter().map(|(k, _)| k).collect();
+    routines.dedup();
+    println!("{:?}\n{:?}", main, routines);
+
+    //recovery
+    let mut recovery_codes = codes;
+    recovery_codes[0] = 2;
+    let mut recovery_bot = IntComputer::new(recovery_codes);
+    recovery_bot.input.push_back(main[0] as i64);
+    for c in main.into_iter().skip(1) {
+        recovery_bot.input.push_back(',' as i64);
+        recovery_bot.input.push_back(c as i64);
+    }
+    recovery_bot.input.push_back('\n' as i64);
+
+    for routine in routines {
+        for c in routine.trim_end_matches(',').chars() {
+            recovery_bot.input.push_back(c as i64);
+        }
+        recovery_bot.input.push_back('\n' as i64);
+    }
+    recovery_bot.input.push_back('n' as i64);
+    recovery_bot.input.push_back('\n' as i64);
+    println!("{:?}\n", recovery_bot.input);
+
+    let mut last_c = recovery_bot.run_codes().unwrap();
+    loop {
+        match recovery_bot.run_codes() {
+            Some(c) => {
+                print!("{}", char::from_u32(last_c as u32).unwrap());
+                last_c = c;
+            }
+            None => {
+                println!("dust = {}", last_c);
+                break;
+            }
+        }
+    }
+}
+
+fn find_subcommands(command: String) -> Option<Vec<(String, char)>> {
+    let subs: Vec<_> = subcommands(&command).collect();
+    let sub_count = subs.len();
+    for a in 0..sub_count {
+        for b in a + 1..sub_count {
+            for c in b + 1..sub_count {
+                match try_match_subs(&command, &vec![&subs[a], &subs[b], &subs[c]]) {
+                    Some(x) => return Some(x),
+                    None => (),
+                }
+            }
+        }
+    }
+    None
+}
+
+fn try_match_subs(command: &str, subs: &Vec<&String>) -> Option<Vec<(String, char)>> {
+    let mut idx = 0;
+    let mut commands = Vec::new();
+    while idx < command.len() {
+        match subs
+            .iter()
+            .zip("ABC".chars())
+            .find(|(sub, _)| command[idx..].starts_with(**sub))
+        {
+            Some((sub, letter)) => {
+                commands.push(((*sub).to_owned(), letter));
+                idx += sub.len();
+            }
+            None => {
+                //println!("failed {:?}", commands);
+                return None;
+            }
+        }
+    }
+    Some(commands)
+}
+
+fn subcommands(commands: &String) -> impl Iterator<Item = String> {
+    let mut subcommands = HashMap::new();
+    for i in 0..commands.len() - 1 {
+        if commands[i..=i] == *"," {
+            continue;
+        }
+        for j in (i + 1..(i + 20).min(commands.len())).rev() {
+            if commands[j..=j] != *"," {
+                continue;
+            }
+            let candidate = commands[i..=j].to_string();
+            let count = count_occurances(&candidate, &commands);
+            if count > 1 {
+                subcommands.insert(candidate, count);
+            }
+        }
+    }
+    let mut subcommands: Vec<_> = subcommands.into_iter().collect();
+    subcommands.sort_by_key(|(k, _)| k.len());
+    subcommands.reverse();
+    subcommands.into_iter().map(|(k, _)| k)
+}
+
+fn count_occurances(candidate: &String, s: &String) -> u32 {
+    let mut count = 0;
+    let mut i = 0;
+    while let Some(x) = s[i..].find(candidate) {
+        count += 1;
+        i += x + candidate.len();
+    }
+    count
 }
 
 fn path(space: Vec<(Point, Status)>) -> Vec<char> {
@@ -31,8 +147,17 @@ fn path(space: Vec<(Point, Status)>) -> Vec<char> {
     loop {
         let next = surrounding(&bot)
             .iter()
-            .filter(|pnt| space.iter().any(|(p, s)| if let Status::Scaffold = s {*pnt == p} else {false}))
-            .filter_map(|pnt| turn_needed(bot_dir, &bot, pnt)).next();
+            .filter(|pnt| {
+                space.iter().any(|(p, s)| {
+                    if let Status::Scaffold = s {
+                        *pnt == p
+                    } else {
+                        false
+                    }
+                })
+            })
+            .filter_map(|pnt| turn_needed(bot_dir, &bot, pnt))
+            .next();
         match next {
             Some(t) => {
                 directions.push(match t {
@@ -45,7 +170,7 @@ fn path(space: Vec<(Point, Status)>) -> Vec<char> {
         }
         directions.push(',');
         let steps = line_from(&space, &bot, bot_dir);
-        bot = steps[steps.len() -1].to_owned();
+        bot = steps[steps.len() - 1].to_owned();
         directions.extend(steps.len().to_string().chars());
         directions.push(',');
     }
@@ -158,8 +283,7 @@ fn turn_needed(direction: Direction, start: &Point, potential: &Point) -> Option
     }
 }
 
-fn view_space(codes: Vec<i64>) -> Vec<(Point, Status)> {
-    let mut bot = IntComputer::new(codes);
+fn view_space(bot: &mut IntComputer) -> Vec<(Point, Status)> {
     let mut tiles = Vec::new();
     let mut x = 0;
     let mut y = 0;
@@ -183,54 +307,34 @@ fn view_space(codes: Vec<i64>) -> Vec<(Point, Status)> {
     tiles
 }
 
-fn _print_maze(tiles: Vec<(Point, Status)>) {
+fn ascii_maze(tiles: &Vec<(Point, Status)>) {
     let min_x = tiles.iter().map(|(pos, _)| pos.x).min().unwrap();
     let max_x = tiles.iter().map(|(pos, _)| pos.x).max().unwrap();
     let min_y = tiles.iter().map(|(pos, _)| pos.y).min().unwrap();
     let max_y = tiles.iter().map(|(pos, _)| pos.y).max().unwrap();
     let points: Vec<_> = tiles
         .into_iter()
-        .map(|(pos, s)| {
-            (
-                Point {
-                    x: pos.x - min_x,
-                    y: pos.y - min_y,
-                },
-                s,
-            )
+        .filter(|(_, s)| {
+            *s == Status::Scaffold || if let Status::Bot(_) = s { true } else { false }
+        })
+        .map(|(pos, _)| Point {
+            x: pos.x - min_x,
+            y: pos.y - min_y,
         })
         .collect();
     let width = max_x - min_x + 1;
     let height = max_y - min_y + 1;
 
-    let intersections: Vec<_> = points
-        .iter()
-        .filter(|p| {
-            surrounding(&p.0).into_iter().all(|s| {
-                points
-                    .iter()
-                    .any(|(ps, stat)| stat == &Status::Scaffold && *ps == s)
-            })
-        })
-        .map(|(p, _)| p.to_owned())
-        .collect();
-
-    let i_sum: i32 = intersections.iter().map(|p| p.x * p.y).sum();
-    println!("{}", i_sum);
-
-    let mut imgbuf = image::ImageBuffer::new(width as u32, height as u32);
-
-    for (p, s) in points {
-        *imgbuf.get_pixel_mut(p.x as u32, p.y as u32) = match s {
-            Status::Space => image::Rgb([0, 0, 0]),
-            Status::Scaffold => image::Rgb([255, 255, 255]),
-            Status::Bot(_) => image::Rgb([255, 0, 255]),
-        };
+    for y in 0..height {
+        for x in 0..width {
+            if points.contains(&Point { x, y }) {
+                print!("# ");
+            } else {
+                print!(". ");
+            }
+        }
+        println!();
     }
-    for i in intersections {
-        *imgbuf.get_pixel_mut(i.x as u32, i.y as u32) = image::Rgb([0, 255, 0]);
-    }
-    imgbuf.save("seventeen/out.png").unwrap();
 }
 
 fn surrounding(point: &Point) -> Vec<Point> {
