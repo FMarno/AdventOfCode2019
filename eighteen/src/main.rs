@@ -139,16 +139,20 @@ fn manhattan(start: &Point, end: &Point) -> i32 {
     (end.x - start.x).abs() + (end.y - start.y).abs()
 }
 
-fn distance_between(route : &(Point,Point), map: &Vec<Vec<bool>>, memory: &mut HashMap<(Point, Point), i32>) -> i32 {
-   match memory.get(route) {
-       Some(d) => *d,
-       None => {
+fn distance_between(
+    route: &(Point, Point),
+    map: &Vec<Vec<bool>>,
+    memory: &mut HashMap<(Point, Point), i32>,
+) -> i32 {
+    match memory.get(route) {
+        Some(d) => *d,
+        None => {
             let d = route_between(&route.0, &route.1, map).unwrap().len() as i32;
-            memory.insert((route.0.to_owned(),route.1.to_owned()), d);
-            memory.insert((route.1.to_owned(),route.0.to_owned()), d);
+            memory.insert((route.0.to_owned(), route.1.to_owned()), d);
+            memory.insert((route.1.to_owned(), route.0.to_owned()), d);
             d
-       },
-   }
+        }
+    }
 }
 
 fn reconstruct_path(came_from: HashMap<Point, Point>, mut current: Point) -> Vec<Point> {
@@ -215,7 +219,7 @@ fn part1(
     required_keys: &HashMap<char, Vec<char>>,
     found_keys: &mut Vec<char>,
     memory: &mut Vec<(Point, Vec<char>, i32)>,
-    distance : &mut dyn FnMut(&(Point,Point)) -> i32,
+    distance: &mut dyn FnMut(&(Point, Point)) -> i32,
 ) -> i32 {
     if keys.is_empty() {
         return 0;
@@ -228,9 +232,13 @@ fn part1(
     let routes: Vec<_> = keys
         .iter()
         .filter(|(key, _)| required_keys[key].iter().all(|k| found_keys.contains(k)))
-        .map(|(key, position)| 
-            (key.to_owned(), position.to_owned(), distance(&(person.to_owned(), position.to_owned())))
-        )
+        .map(|(key, position)| {
+            (
+                key.to_owned(),
+                position.to_owned(),
+                distance(&(person.to_owned(), position.to_owned())),
+            )
+        })
         .collect();
     let mut min = std::i32::MAX;
     for (key, position, d) in routes {
@@ -273,7 +281,7 @@ fn doors_between(
 }
 
 fn main() {
-    let (person, mut keys, doors, map) = read_map("eighteen/test1");
+    let (person, mut keys, doors, map) = read_map("eighteen/input");
     let required_keys = keys
         .iter()
         .map(|(c, p)| (c.to_owned(), doors_between(&map, &doors, &person, p)))

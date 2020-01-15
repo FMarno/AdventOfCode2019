@@ -6,9 +6,9 @@ fn main() -> std::io::Result<()> {
     let f = File::open("fourteen/input")?;
     let reader = BufReader::new(f);
     let recipes = create_recipes(reader.lines());
-    let ore: i64 = 1000000000000;
-    println!("{}", cost_for_fuel(82892753, &recipes));
-    println!("{}", cost_for_fuel(82892754, &recipes));
+    let ore: i64 = 1_000_000_000_000;
+    println!("{}", cost_for_fuel(82_892_753, &recipes));
+    println!("{}", cost_for_fuel(82_892_754, &recipes));
     println!("{}", possible_fuel(ore, &recipes));
     Ok(())
 }

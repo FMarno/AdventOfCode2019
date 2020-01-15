@@ -4,7 +4,7 @@ fn main() {
     let input = fs::read_to_string("two/input.txt").unwrap();
     let mut codes: Vec<usize> = input
         .trim()
-        .split(",")
+        .split(',')
         .map(|x| x.parse::<usize>().unwrap())
         .collect();
     for x in 1..99 {
@@ -12,7 +12,7 @@ fn main() {
             codes[1] = x;
             codes[2] = y;
             let out = run_codes(codes.to_vec());
-            if out == 19690720 {
+            if out == 19_690_720 {
                 println!("{} {}", x, y);
                 return;
             }

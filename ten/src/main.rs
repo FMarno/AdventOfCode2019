@@ -37,7 +37,7 @@ struct PointInfo {
     distance: f32,
 }
 
-fn laser_order(origin: &Point, asteroids: &Vec<Point>) -> Vec<Point> {
+fn laser_order(origin: &Point, asteroids: &[Point]) -> Vec<Point> {
     let mut angle_distance: Vec<(f32, Vec<PointInfo>)> = Vec::new();
     let asteroids_info = asteroids
         .iter()
@@ -71,15 +71,16 @@ fn laser_order(origin: &Point, asteroids: &Vec<Point>) -> Vec<Point> {
             .filter_map(|(_angle, infos)| infos.get(x))
             .map(|info| info.point.to_owned())
             .collect();
-        match circle.len() == 0 {
-            false => order.extend(circle),
-            true => break,
+        if circle.is_empty() {
+            break;
+        } else {
+            order.extend(circle)
         }
     }
     order
 }
 
-fn visible_points(asteroid: &Point, others: &Vec<Point>) -> usize {
+fn visible_points(asteroid: &Point, others: &[Point]) -> usize {
     let mut angles: Vec<_> = others
         .iter()
         .filter(|x| !(x.x == asteroid.x && x.y == asteroid.y))

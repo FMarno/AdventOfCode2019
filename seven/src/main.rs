@@ -9,7 +9,7 @@ fn main() {
     let input = fs::read_to_string("seven/input").expect("can't open file");
     let codes: Vec<i32> = input
         .trim()
-        .split(",")
+        .split(',')
         .map(|x| x.parse::<i32>().unwrap())
         .collect();
     /*let m = permutations.iter()

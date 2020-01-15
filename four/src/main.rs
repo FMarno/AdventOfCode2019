@@ -1,8 +1,8 @@
 fn main() {
-    println!("{}, {:?}", "112233", contains_double("112232".as_bytes()));
-    println!("{}, {:?}", "123444", contains_double("123444".as_bytes()));
-    println!("{}, {:?}", "111122", contains_double("111122".as_bytes()));
-    let range = 278384..824795;
+    println!("112233, {:?}", contains_double(b"112232"));
+    println!("123444, {:?}", contains_double(b"123444"));
+    println!("111122, {:?}", contains_double(b"111122"));
+    let range = 278_384..824_795;
     let possible = range
         .map(|x| x.to_string().as_bytes().to_vec())
         .filter(|x| contains_double(x))
@@ -27,7 +27,7 @@ where
             return true;
         }
     }
-    return false;
+    false
 }
 
 fn accending(number: &[u8]) -> bool {
@@ -36,5 +36,5 @@ fn accending(number: &[u8]) -> bool {
             return false;
         }
     }
-    return true;
+    true
 }

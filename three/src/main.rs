@@ -41,14 +41,14 @@ fn part2(intersections: Vec<Point>, line1: Vec<Line>, line2: Vec<Line>) {
     println!("{:?}", delays[0]);
 }
 
-fn distance_to(p: &Point, line: &Vec<Line>) -> i32 {
+fn distance_to(p: &Point, line: &[Line]) -> i32 {
     let mut traveled = 0;
     for l in line {
         if between(l.start.x, l.finish.x, p.x) && between(l.start.y, l.finish.y, p.y) {
             if l.start.x == p.x {
-                traveled = traveled + (l.start.y - p.y).abs();
+                traveled += (l.start.y - p.y).abs();
             } else {
-                traveled = traveled + (l.start.x - p.x).abs();
+                traveled += (l.start.x - p.x).abs();
             }
             break;
         } else {
@@ -72,7 +72,7 @@ fn intersection(a: &Line, b: &Line) -> Option<Point> {
     if between(hori.start.x, hori.finish.x, x) {
         let y = hori.start.y;
         if between(vert.start.y, vert.finish.y, y) {
-            return Some(Point { x: x, y: y });
+            return Some(Point { x, y });
         }
     }
     None

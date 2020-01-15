@@ -8,10 +8,10 @@ fn main() -> std::io::Result<()> {
     let mut masses = HashMap::new();
     for l in reader.lines() {
         let l = l.unwrap();
-        let parts: Vec<_> = l.split(")").collect();
+        let parts: Vec<_> = l.split(')').collect();
         let major = parts[0].to_owned();
         let minor = parts[1].to_owned();
-        let orbitors = masses.entry(major).or_insert(Vec::new());
+        let orbitors = masses.entry(major).or_insert_with(Vec::new);
         (*orbitors).push(minor);
     }
     let mut santa = path_to("SAN", "COM", &masses).unwrap();
@@ -29,7 +29,7 @@ fn main() -> std::io::Result<()> {
 }
 
 fn _count_orbits(masses: HashMap<String, Vec<String>>) -> i32 {
-    return _count_orbits_recursive("COM", &masses, 0);
+    _count_orbits_recursive("COM", &masses, 0)
 }
 
 fn _count_orbits_recursive(mass: &str, masses: &HashMap<String, Vec<String>>, level: i32) -> i32 {
@@ -58,7 +58,7 @@ fn path_to(
             return None;
         }
     };
-    if children.iter().find(|c| c == &goal).is_some() {
+    if children.iter().any(|c| c == &goal) {
         return Some(vec![goal.to_owned(), current.to_owned()]);
     }
     let mut path: Vec<_> = children
