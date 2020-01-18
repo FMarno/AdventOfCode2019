@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -23,26 +23,29 @@ impl PartialOrd for Point {
     }
 }
 
-#[derive(Eq, PartialEq)]
-struct SearchState {
-    f_score: i32, // estimate total score
-    point: Point,
+#[derive(Eq, PartialEq, Debug)]
+struct SearchState<T> {
+    score: i32, // estimate total score
+    node: T,
 }
 
-impl Ord for SearchState {
-    fn cmp(&self, other: &SearchState) -> Ordering {
+impl<T> Ord for SearchState<T>
+where
+    T: Eq + Ord,
+{
+    fn cmp(&self, other: &SearchState<T>) -> Ordering {
         // Notice that the we flip the ordering to make it a min heap
         // In case of a tie we compare positions - this step is necessary
         // to make implementations of `PartialEq` and `Ord` consistent.
-        other
-            .f_score
-            .cmp(&self.f_score)
-            .then_with(|| self.point.cmp(&other.point))
+        other.score.cmp(&self.score).then_with(|| self.node.cmp(&other.node))
     }
 }
 
-impl PartialOrd for SearchState {
-    fn partial_cmp(&self, other: &SearchState) -> Option<Ordering> {
+impl<T> PartialOrd for SearchState<T>
+where
+    T: PartialEq + Ord,
+{
+    fn partial_cmp(&self, other: &SearchState<T>) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -51,13 +54,13 @@ fn read_map<P: AsRef<Path>>(
     path: P,
 ) -> (
     Point,
-    Vec<(char, Point)>,
+    HashMap<char, Point>,
     HashMap<Point, char>,
     Vec<Vec<bool>>,
 ) {
     let f = fs::File::open(path).unwrap();
     let reader = BufReader::new(f);
-    let mut keys = Vec::new();
+    let mut keys = HashMap::new();
     let mut doors = HashMap::new();
     let mut person = Point { x: 0, y: 0 };
     let map = reader
@@ -79,13 +82,13 @@ fn read_map<P: AsRef<Path>>(
                         true
                     }
                     n if n.is_lowercase() => {
-                        keys.push((
+                        keys.insert(
                             n,
                             Point {
                                 x: x as i32,
                                 y: y as i32,
                             },
-                        ));
+                        );
                         true
                     }
                     mut n if n.is_uppercase() => {
@@ -139,16 +142,20 @@ fn manhattan(start: &Point, end: &Point) -> i32 {
     (end.x - start.x).abs() + (end.y - start.y).abs()
 }
 
-fn distance_between(route : &(Point,Point), map: &Vec<Vec<bool>>, memory: &mut HashMap<(Point, Point), i32>) -> i32 {
-   match memory.get(route) {
-       Some(d) => *d,
-       None => {
+fn distance_between(
+    route: &(Point, Point),
+    map: &Vec<Vec<bool>>,
+    memory: &mut HashMap<(Point, Point), i32>,
+) -> i32 {
+    match memory.get(route) {
+        Some(d) => *d,
+        None => {
             let d = route_between(&route.0, &route.1, map).unwrap().len() as i32;
-            memory.insert((route.0.to_owned(),route.1.to_owned()), d);
-            memory.insert((route.1.to_owned(),route.0.to_owned()), d);
+            memory.insert((route.0.to_owned(), route.1.to_owned()), d);
+            memory.insert((route.1.to_owned(), route.0.to_owned()), d);
             d
-       },
-   }
+        }
+    }
 }
 
 fn reconstruct_path(came_from: HashMap<Point, Point>, mut current: Point) -> Vec<Point> {
@@ -167,11 +174,11 @@ fn route_between(start: &Point, end: &Point, map: &Vec<Vec<bool>>) -> Option<Vec
     }
     //println!("{:?} -> {:?}", start, end);
 
-    let mut open_set: BinaryHeap<SearchState> = BinaryHeap::new();
+    let mut open_set: BinaryHeap<SearchState<Point>> = BinaryHeap::new();
     let start_f_score = manhattan(&start, &end);
     open_set.push(SearchState {
-        f_score: start_f_score,
-        point: start.to_owned(),
+        score: start_f_score,
+        node: start.to_owned(),
     });
 
     let mut g_score: HashMap<Point, i32> = HashMap::new();
@@ -183,25 +190,22 @@ fn route_between(start: &Point, end: &Point, map: &Vec<Vec<bool>>) -> Option<Vec
     let mut came_from: HashMap<Point, Point> = HashMap::new();
 
     while let Some(current) = open_set.pop() {
-        if current.point == *end {
-            return Some(reconstruct_path(came_from, current.point));
+        if current.node == *end {
+            return Some(reconstruct_path(came_from, current.node));
         }
-        if current.f_score > f_score[&current.point] {
-            continue;
-        }
-        let current_g = g_score[&current.point];
+        let current_g = g_score[&current.node];
 
-        for neighbour in neighbours(&current.point, &map) {
+        for neighbour in neighbours(&current.node, &map) {
             let potential_g = current_g + 1;
             let neighbour_g = g_score.entry(neighbour.to_owned()).or_insert(std::i32::MAX);
             if potential_g < *neighbour_g {
-                came_from.insert(neighbour.to_owned(), current.point.to_owned());
+                came_from.insert(neighbour.to_owned(), current.node.to_owned());
                 *neighbour_g = potential_g;
                 let new_f_score = potential_g + manhattan(&neighbour, &end);
                 f_score.insert(neighbour.to_owned(), new_f_score);
                 open_set.push(SearchState {
-                    f_score: new_f_score,
-                    point: neighbour,
+                    score: new_f_score,
+                    node: neighbour,
                 });
             }
         }
@@ -209,54 +213,91 @@ fn route_between(start: &Point, end: &Point, map: &Vec<Vec<bool>>) -> Option<Vec
     None
 }
 
-fn part1(
-    person: Point,
-    keys: &mut Vec<(char, Point)>,
-    required_keys: &HashMap<char, Vec<char>>,
-    found_keys: &mut Vec<char>,
-    memory: &mut Vec<(Point, Vec<char>, i32)>,
-    distance : &mut dyn FnMut(&(Point,Point)) -> i32,
-) -> i32 {
-    if keys.is_empty() {
-        return 0;
-    }
-    if let Some((_, _, d)) = memory.iter().find(|(p, ks, _)| {
-        *p == person && ks.len() == found_keys.len() && ks.iter().all(|k| found_keys.contains(k))
-    }) {
-        return *d;
-    }
-    let routes: Vec<_> = keys
-        .iter()
-        .filter(|(key, _)| required_keys[key].iter().all(|k| found_keys.contains(k)))
-        .map(|(key, position)| 
-            (key.to_owned(), position.to_owned(), distance(&(person.to_owned(), position.to_owned())))
-        )
-        .collect();
-    let mut min = std::i32::MAX;
-    for (key, position, d) in routes {
-        // mark key found
-        keys.retain(|(k, _)| *k != key);
-        found_keys.push(key);
+#[derive(PartialEq, Eq, Clone, Debug)]
+struct KeySet {
+    keys: HashSet<char>,
+    point: Point,
+}
 
-        // keep exploring
-        let score = d + part1(
-            position.to_owned(),
-            keys,
-            required_keys,
-            found_keys,
-            memory,
-            distance,
-        );
-        if score < min {
-            min = score;
+impl Ord for KeySet {
+    fn cmp(&self, other: &KeySet) -> Ordering {
+        // Notice that the we flip the ordering to make it a min heap
+        // In case of a tie we compare positions - this step is necessary
+        // to make implementations of `PartialEq` and `Ord` consistent.
+        self.keys.len().cmp(&other.keys.len()).then_with(|| self.point.cmp(&other.point))
+    }
+}
+
+impl PartialOrd for KeySet {
+    fn partial_cmp(&self, other: &KeySet) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn available(required_keys: &HashMap<char, Vec<char>>, owned: &HashSet<char>) -> Vec<char> {
+    required_keys
+        .iter()
+        .filter(|(_, req)| req.iter().all(|r| owned.contains(r)))
+        .filter(|(k, _)| !owned.contains(k))
+        .map(|(k, _)| k.to_owned())
+        .collect()
+}
+
+fn part1(
+    start: Point,
+    keys: &mut HashMap<char, Point>,
+    required_keys: &HashMap<char, Vec<char>>,
+    distance: &mut dyn FnMut(&(Point, Point)) -> i32,
+) -> i32 {
+    let mut distance_to: BTreeMap<KeySet, i32> = BTreeMap::new();
+    distance_to.insert(
+        KeySet {
+            keys: HashSet::new(),
+            point: start.to_owned(),
+        },
+        0,
+    );
+
+    let mut open_set: BinaryHeap<SearchState<_>> = BinaryHeap::new();
+    open_set.push(SearchState {
+        node: KeySet {
+            keys: HashSet::new(),
+            point: start,
+        },
+        score: 0,
+    });
+    while let Some(current) = open_set.pop() {
+        if current.node.keys.len() == keys.len() {
+            println!("{:?}", current.node.keys);
+            return current.score;
         }
 
-        // unmark key found
-        keys.push((key, position));
-        found_keys.pop();
+        println!("{:?} {:?} {}", current.node.keys, current.node.point, current.score);
+        for neighbour in available(required_keys, &current.node.keys).into_iter() {
+            let location = keys[&neighbour].to_owned();
+            let tentative_score =
+                current.score + distance(&(current.node.point.to_owned(), location.to_owned()));
+
+            let mut ks = current.node.keys.to_owned();
+            ks.insert(neighbour);
+
+            let key_set = KeySet {
+                keys: ks,
+                point: location,
+            };
+            let current_score = distance_to
+                .entry(key_set.to_owned())
+                .or_insert(std::i32::MAX);
+            if tentative_score < *current_score {
+                *current_score = tentative_score;
+                open_set.push(SearchState {
+                    node: key_set,
+                    score: *current_score,
+                });
+            }
+        }
     }
-    memory.push((person, found_keys.to_owned(), min));
-    min
+    0
 }
 
 fn doors_between(
@@ -278,17 +319,13 @@ fn main() {
         .iter()
         .map(|(c, p)| (c.to_owned(), doors_between(&map, &doors, &person, p)))
         .collect();
-    let mut found_keys = Vec::new();
     let mut route_memory = HashMap::new();
-    let mut memory = Vec::new();
     println!(
         "{}",
         part1(
             person,
             &mut keys,
             &required_keys,
-            &mut found_keys,
-            &mut memory,
             &mut |p| distance_between(p, &map, &mut route_memory)
         )
     );
