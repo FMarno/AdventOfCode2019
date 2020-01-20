@@ -50,13 +50,31 @@ impl PartialOrd for KeySet {
     }
 }
 
-fn available(required_keys: &HashMap<char, Vec<char>>, owned: &HashSet<char>) -> Vec<char> {
-    required_keys
+pub fn available(required_keys: &HashMap<char, Vec<char>>, owned: &HashSet<char>) -> Vec<char> {
+    let out = required_keys
         .iter()
         .filter(|(_, req)| req.iter().all(|r| owned.contains(r)))
         .filter(|(k, _)| !owned.contains(k))
         .map(|(k, _)| k.to_owned())
-        .collect()
+        .collect();
+    //println!("{:?}, out {:?}", owned, out);
+    out
+}
+
+fn reconstuct_path(prev : &BTreeMap<KeySet, KeySet>, mut last : KeySet) -> Vec<char> {
+    let mut path = Vec::new();
+    while let Some(next) = prev.get(&last) {
+        let diff = last.keys.difference(&next.keys);
+        match diff.last() {
+            Some(c) => {
+        path.push(c.to_owned());
+        last = next.to_owned();
+            },
+            None => break,
+        }
+    }
+    path.reverse();
+    path
 }
 
 pub fn part1(
@@ -74,6 +92,7 @@ pub fn part1(
         0,
     );
 
+    let mut prev : BTreeMap<KeySet, KeySet> = BTreeMap::new();
     let mut open_set: BinaryHeap<SearchState> = BinaryHeap::new();
     open_set.push(SearchState {
         node: KeySet {
@@ -82,16 +101,19 @@ pub fn part1(
         },
         score: 0,
     });
+
+    let mut paths = Vec::new();
     while let Some(current) = open_set.pop() {
         if current.node.keys.len() == keys.len() {
-            println!("{:?}", current.node.keys);
-            return current.score;
+            println!("found path {:?} {}", reconstuct_path(&prev, current.node.to_owned()), current.score);
+            paths.push(current);
+            continue;
         }
 
-        println!(
+        /*println!(
             "{:?} {:?} {}",
             current.node.keys, current.node.point, current.score
-        );
+        );*/
         for neighbour in available(required_keys, &current.node.keys).into_iter() {
             let location = keys[&neighbour].to_owned();
             let tentative_score =
@@ -109,6 +131,7 @@ pub fn part1(
                 .or_insert(std::i32::MAX);
             if tentative_score < *current_score {
                 *current_score = tentative_score;
+                prev.insert( key_set.to_owned(),current.node.to_owned());
                 open_set.push(SearchState {
                     node: key_set,
                     score: *current_score,
@@ -116,5 +139,5 @@ pub fn part1(
             }
         }
     }
-    0
+    paths.into_iter().map(|ss| ss.score).min().unwrap()
 }
