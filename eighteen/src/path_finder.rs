@@ -49,10 +49,10 @@ impl PartialOrd for KeySet {
     }
 }
 
-pub fn available(required_keys: &HashMap<u32, Vec<u32>>, owned: u32) -> Vec<u32> {
+pub fn available(required_keys: &HashMap<u32, u32>, owned: u32) -> Vec<u32> {
     required_keys
         .iter()
-        .filter(|(_, req)| req.iter().all(|r| owned & *r != 0))
+        .filter(|(_, req)| (*req & owned) == **req)
         .filter(|(k, _)| (owned & **k) == 0)
         .map(|(k, _)| k.to_owned())
         .collect()
@@ -61,7 +61,7 @@ pub fn available(required_keys: &HashMap<u32, Vec<u32>>, owned: u32) -> Vec<u32>
 pub fn part1(
     start: Point,
     keys: &mut HashMap<u32, Point>,
-    required_keys: &HashMap<u32, Vec<u32>>,
+    required_keys: &HashMap<u32, u32>,
     distance: &mut dyn FnMut(&(Point, Point)) -> i32,
     final_value : u32,
 ) -> i32 {

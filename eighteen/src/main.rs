@@ -26,7 +26,7 @@ fn main() {
     let (person, mut keys, doors, map) = read_map("eighteen/input");
     let required_keys = keys
         .iter()
-        .map(|(c, p)| (c.to_owned(), doors_between(&map, &doors, &person, p)))
+        .map(|(c, p)| (c.to_owned(), doors_between(&map, &doors, &person, p).into_iter().fold(0,|a,x| a | x)))
         .collect();
     let mut route_memory = HashMap::new();
     let final_value = 2_u32.pow(keys.len() as u32)-1;
