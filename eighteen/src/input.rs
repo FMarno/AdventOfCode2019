@@ -14,7 +14,7 @@ pub fn read_map<P: AsRef<Path>>(
 ) {
     let f = fs::File::open(path).unwrap();
     let reader = BufReader::new(f);
-    let mut letter_to_shift : HashMap<char, u32> = HashMap::new();
+    let mut letter_to_shift: HashMap<char, u32> = HashMap::new();
     let mut keys = HashMap::new();
     let mut doors = HashMap::new();
     let mut person = Point { x: 0, y: 0 };
@@ -38,9 +38,9 @@ pub fn read_map<P: AsRef<Path>>(
                         true
                     }
                     n if n.is_lowercase() => {
-                        let shift = letter_to_shift.entry(n).or_insert(curr_shift); 
+                        let shift = letter_to_shift.entry(n).or_insert(curr_shift);
                         if *shift == curr_shift {
-                            curr_shift= curr_shift << 1;
+                            curr_shift = curr_shift << 1;
                         }
                         keys.insert(
                             *shift,
@@ -53,9 +53,9 @@ pub fn read_map<P: AsRef<Path>>(
                     }
                     mut n if n.is_uppercase() => {
                         n.make_ascii_lowercase();
-                        let shift = letter_to_shift.entry(n).or_insert(curr_shift); 
+                        let shift = letter_to_shift.entry(n).or_insert(curr_shift);
                         if *shift == curr_shift {
-                            curr_shift= curr_shift << 1;
+                            curr_shift = curr_shift << 1;
                         }
                         doors.insert(
                             Point {

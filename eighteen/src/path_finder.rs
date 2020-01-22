@@ -49,7 +49,7 @@ impl PartialOrd for KeySet {
     }
 }
 
-pub fn available(required_keys: &HashMap<u32, u32>, owned: u32) -> Vec<u32> {
+fn available(required_keys: &HashMap<u32, u32>, owned: u32) -> Vec<u32> {
     required_keys
         .iter()
         .filter(|(_, req)| (*req & owned) == **req)
@@ -58,12 +58,41 @@ pub fn available(required_keys: &HashMap<u32, u32>, owned: u32) -> Vec<u32> {
         .collect()
 }
 
+fn neighbours(
+    keys: &HashMap<u32, Point>,
+    required_keys: &HashMap<u32, u32>,
+    distance: &mut dyn FnMut((Point, Point)) -> Option<i32>,
+    current: SearchState,
+) -> Vec<SearchState> {
+    available(required_keys, current.node.keys)
+        .into_iter()
+        .map(|neighbour_key| {
+            let location = keys[&neighbour_key].to_owned();
+            let tentative_score =
+                current.score + distance((current.node.point.to_owned(), location.to_owned())).unwrap();
+
+            let mut ks = current.node.keys.to_owned();
+            ks = ks | neighbour_key;
+
+            let key_set = KeySet {
+                keys: ks,
+                point: location,
+            };
+
+            SearchState {
+                node: key_set,
+                score: tentative_score,
+            }
+        })
+        .collect()
+}
+
 pub fn part1(
     start: Point,
-    keys: &mut HashMap<u32, Point>,
+    keys: &HashMap<u32, Point>,
     required_keys: &HashMap<u32, u32>,
-    distance: &mut dyn FnMut(&(Point, Point)) -> i32,
-    final_value : u32,
+    distance: &mut dyn FnMut((Point, Point)) -> Option<i32>,
+    final_value: u32,
 ) -> i32 {
     let mut distance_to: BTreeMap<KeySet, i32> = BTreeMap::new();
     distance_to.insert(
@@ -87,28 +116,13 @@ pub fn part1(
         if current.node.keys == final_value {
             return current.score;
         }
-
-        for neighbour in available(required_keys, current.node.keys).into_iter() {
-            let location = keys[&neighbour].to_owned();
-            let tentative_score =
-                current.score + distance(&(current.node.point.to_owned(), location.to_owned()));
-
-            let mut ks = current.node.keys.to_owned();
-            ks = ks | neighbour;
-
-            let key_set = KeySet {
-                keys: ks,
-                point: location,
-            };
+        for neighbour in neighbours(keys, required_keys, distance, current) {
             let current_score = distance_to
-                .entry(key_set.to_owned())
+                .entry(neighbour.node.to_owned())
                 .or_insert(std::i32::MAX);
-            if tentative_score < *current_score {
-                *current_score = tentative_score;
-                open_set.push(SearchState {
-                    node: key_set,
-                    score: *current_score,
-                });
+            if neighbour.score < *current_score {
+                *current_score = neighbour.score;
+                open_set.push(neighbour);
             }
         }
     }

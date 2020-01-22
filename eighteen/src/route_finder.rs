@@ -60,16 +60,16 @@ fn manhattan(start: &Point, end: &Point) -> i32 {
 }
 
 pub fn distance_between(
-    route: &(Point, Point),
+    route: (Point, Point),
     map: &Vec<Vec<bool>>,
-    memory: &mut HashMap<(Point, Point), i32>,
-) -> i32 {
-    match memory.get(route) {
+    memory: &mut HashMap<(Point, Point), Option<i32>>,
+) -> Option<i32> {
+    match memory.get(&route) {
         Some(d) => *d,
         None => {
-            let d = route_between(&route.0, &route.1, map).unwrap().len() as i32;
-            memory.insert((route.0.to_owned(), route.1.to_owned()), d);
+            let d = route_between(&route.0, &route.1, map).map(|x| x.len() as i32);
             memory.insert((route.1.to_owned(), route.0.to_owned()), d);
+            memory.insert(route, d);
             d
         }
     }
