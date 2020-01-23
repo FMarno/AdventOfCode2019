@@ -5,8 +5,8 @@ mod point;
 mod route_finder;
 
 use crate::input::*;
-use crate::path_finder::part1;
 use crate::part2::part2;
+use crate::path_finder::part1;
 use crate::point::*;
 use crate::route_finder::*;
 use std::collections::HashMap;
@@ -49,17 +49,29 @@ fn main() {
             final_value
         )
     );
-    let (x,y) = (map[0].len()/2, map.len()/2);
+    let (x, y) = (map[0].len() / 2, map.len() / 2);
     map[y][x] = false;
-    map[y+1][x] = false;
-    map[y-1][x] = false;
-    map[y][x+1] = false;
-    map[y][x-1] = false;
+    map[y + 1][x] = false;
+    map[y - 1][x] = false;
+    map[y][x + 1] = false;
+    map[y][x - 1] = false;
     let starts = [
-        Point{x:(x+1) as i32,y:(y+1) as i32},
-        Point{x:(x+1) as i32,y:(y-1) as i32},
-        Point{x:(x-1) as i32,y:(y+1) as i32},
-        Point{x:(x-1) as i32,y:(y-1) as i32},
+        Point {
+            x: (x + 1) as i32,
+            y: (y + 1) as i32,
+        },
+        Point {
+            x: (x + 1) as i32,
+            y: (y - 1) as i32,
+        },
+        Point {
+            x: (x - 1) as i32,
+            y: (y + 1) as i32,
+        },
+        Point {
+            x: (x - 1) as i32,
+            y: (y - 1) as i32,
+        },
     ];
     let mut part2_route_memory = HashMap::new();
     println!(

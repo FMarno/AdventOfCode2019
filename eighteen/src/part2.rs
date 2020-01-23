@@ -29,7 +29,7 @@ impl PartialOrd for SearchState {
 #[derive(PartialEq, Eq, Clone, Debug)]
 struct KeySet {
     keys: u32,
-    points: [Point;4],
+    points: [Point; 4],
 }
 
 impl Ord for KeySet {
@@ -68,10 +68,15 @@ fn neighbours(
         .into_iter()
         .map(|neighbour_key| {
             let location = keys[&neighbour_key].to_owned();
-            
-            let (mover,tentative_score) = current.node.points.iter()
+
+            let (mover, tentative_score) = current
+                .node
+                .points
+                .iter()
                 .enumerate()
-                .filter_map(|(idx,p)| distance((p.to_owned(), location.to_owned())).map(|d| (idx,current.score+d)))
+                .filter_map(|(idx, p)| {
+                    distance((p.to_owned(), location.to_owned())).map(|d| (idx, current.score + d))
+                })
                 .next()
                 .unwrap();
 

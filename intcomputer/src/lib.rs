@@ -73,7 +73,6 @@ impl IntComputer {
                     let location = self.get_argument_location(self.pointer + 1, mode1);
                     let input = match self.input.pop_front() {
                         Some(i) => {
-                            println!("loading {}", i);
                             i
                         }
                         None => {

@@ -68,8 +68,8 @@ fn neighbours(
         .into_iter()
         .map(|neighbour_key| {
             let location = keys[&neighbour_key].to_owned();
-            let tentative_score =
-                current.score + distance((current.node.point.to_owned(), location.to_owned())).unwrap();
+            let tentative_score = current.score
+                + distance((current.node.point.to_owned(), location.to_owned())).unwrap();
 
             let mut ks = current.node.keys.to_owned();
             ks = ks | neighbour_key;
