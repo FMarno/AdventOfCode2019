@@ -20,8 +20,8 @@ fn needed_fuel(mass: i32) -> i32 {
     let fuel = mass / 3 - 2;
     if fuel > 0 {
         let extra = needed_fuel(fuel);
-        return fuel + extra;
+        fuel + extra
     } else {
-        return 0;
+        0
     }
 }

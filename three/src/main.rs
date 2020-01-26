@@ -46,13 +46,13 @@ fn distance_to(p: &Point, line: &Vec<Line>) -> i32 {
     for l in line {
         if between(l.start.x, l.finish.x, p.x) && between(l.start.y, l.finish.y, p.y) {
             if l.start.x == p.x {
-                traveled = traveled + (l.start.y - p.y).abs();
+                traveled += (l.start.y - p.y).abs();
             } else {
-                traveled = traveled + (l.start.x - p.x).abs();
+                traveled += (l.start.x - p.x).abs();
             }
             break;
         } else {
-            traveled = traveled + (l.start.x - l.finish.x).abs() + (l.start.y - l.finish.y).abs();
+            traveled += (l.start.x - l.finish.x).abs() + (l.start.y - l.finish.y).abs();
         }
     }
     traveled

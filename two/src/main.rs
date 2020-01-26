@@ -4,7 +4,7 @@ fn main() {
     let input = fs::read_to_string("two/input.txt").unwrap();
     let mut codes: Vec<usize> = input
         .trim()
-        .split(",")
+        .split(',')
         .map(|x| x.parse::<usize>().unwrap())
         .collect();
     for x in 1..99 {
